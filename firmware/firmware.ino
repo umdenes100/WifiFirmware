@@ -10,6 +10,7 @@
 #endif
 
 WiFiUDP client;
+unsigned char seq = 0;
 
 const char* VS_ADDRESS = "192.168.1.2";
 const int VS_PORT = 7755;
@@ -29,12 +30,12 @@ void setup() {
   client.begin(7755);
   
   // Open a packet for writing
-  client.beginPacket(VS_ADDRESS, VS_PORT);
+  beginPacket();
 }
 
 void loop() {
   static int opcode, pos;
-  static unsigned int lastWrite;
+  static unsigned long lastWrite;
   static bool dataWritten;
   
   // Accept incoming data
@@ -63,7 +64,7 @@ void loop() {
   
   // If the flush sequence is fully written, send data
   if (pos == 4) {
-    client.endPacket();
+    unsigned char expectedSeq = endPacket();
     pos = 0;
     
     // If the opcode sent requires a response, start listening
@@ -74,19 +75,32 @@ void loop() {
       while (millis() - start < 100) {
         if ((packetSize = client.parsePacket())) {
           client.read(buffer, packetSize);
-          Serial.write(buffer, packetSize);
-          break;
+          if (buffer[0] == expectedSeq) {
+            Serial.write(buffer + 1, packetSize - 1);
+            break;
+          }
         }
       }
     }
     
     dataWritten = false;
-    client.beginPacket(VS_ADDRESS, VS_PORT);
+    beginPacket();
   }
   
   // Clear the write buffer after timeout
   if (dataWritten && millis() - lastWrite > 20) {
-    client.beginPacket(VS_ADDRESS, VS_PORT);
+    beginPacket();
     dataWritten = false;
   }
 }
+
+void beginPacket() {
+  client.beginPacket(VS_ADDRESS, VS_PORT);
+  client.write(seq);
+}
+
+unsigned char endPacket() {
+  client.endPacket();
+  return seq++;
+}
+
