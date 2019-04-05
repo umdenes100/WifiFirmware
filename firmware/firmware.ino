@@ -1,5 +1,5 @@
 #include <ESP8266WiFi.h>
-#include <WiFiUDP.h>
+#include <WiFiUdp.h>
 
 // WiFi network name
 #define ROOM 1116
@@ -23,7 +23,7 @@ void setup() {
   // Connect to Vision System network
   WiFi.begin(WIFI_NETWORK, NULL);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    while (true);
+    ESP.restart();
   }
 
   // Begin listening for responses on port 7755
@@ -89,8 +89,7 @@ void loop() {
   
   // Clear the write buffer after timeout
   if (dataWritten && millis() - lastWrite > 20) {
-    beginPacket();
-    dataWritten = false;
+    ESP.restart();
   }
 }
 
