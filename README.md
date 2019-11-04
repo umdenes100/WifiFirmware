@@ -18,6 +18,6 @@ For a generic USB-to-TTL converter, the ESP8266 can be wired for progamming with
 
 ### Uploading Code
 
-Open the sketch from this repository in Arduino IDE. Set the board type by selecting **Tools > Board > Generic ESP8266 Module**. Set the flash mode by selecting **Tools > Flash Mode > DIO**. Set the memory size by selecting **Tools > Flash Size > 1M (no SPIFFs)**. Set the programmer by selecting **Tools > Flash Mode > USBasp**. Set the appropriate port and click upload.
+Open the sketch from this repository in Arduino IDE. Set the board type by selecting **Tools > Board > Generic ESP8266 Module**. Set the flash mode by selecting **Tools > Flash Mode > DIO**. Set the memory size by selecting **Tools > Flash Size > 1M (no SPIFFs)**. Set the programmer by selecting **Tools > Programmer > USBasp**. Set the appropriate port and click upload.
 
 _Note: The ESP8266 may need to be reset between code uploads. Simply disconnect and reconnect the VCC connection._
