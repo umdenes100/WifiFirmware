@@ -27,7 +27,7 @@ In text form, this is how the ESP-01 pins should be connected:
 This ensures the ESP-01 will boot in programming mode (GPIO0 to ground puts it in programming mode).
 
 #### Step 2
-Open the firmware.ino file from this repository in the Arduino IDE. Change line 5 to 1116 or 1215 depending on which room you want the module to work in. "
+Open the firmware.ino file from this repository in the Arduino IDE. Change line 5 to 1116 or 1215 depending on which room you want the module to work in.
 
 #### Step 3
 If you haven't done this before, go to **File > Preferences** (**Ctrl + Comma** on Windows or **⌘ + Comma** on macOS). In the textbox for "Additional Boards Manager URLs", insert `http://arduino.esp8266.com/stable/package_esp8266com_index.json`, then press OK. Update the board definitions by opening the Boards Manager (**Tools > Board > Boards Manager...**), finding "esp8266" on the list, selecting the latest version, and pressing Install. **This only needs to be done once.**
