@@ -7,9 +7,9 @@ Firmware to be uploaded to ESP8266 modules to interact with Vision System v5.1.x
 ### Recommended Procedure: Using an Arduino Uno as a USB-to-Serial Converter
 
 #### Step 1
-Put the ESP-01 in an ESP-01 Breakout Board to easily access each pin on a breadboard. Then connect the ESP-01, Arduino Uno, and your computer like this:
+Place the ESP-01 in an ESP-01 Breakout Board to easily access each pin on a breadboard. If you don't have a ESP-01 Breakout Board, use female-male wires to connect the ESP-01 directly to the arduino. Then connect the ESP-01, Arduino Uno, and your computer like this:
 
-![alt text](./HardwareSetupSchematic.jpg "Hardware Setup Schematic")
+![alt text](./HardwareSetupSchematic.jpg "Hardware Setup Schematic") 
 
 In text form, this is how the ESP-01 pins should be connected:
 
