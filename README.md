@@ -42,7 +42,7 @@ Note: The exact options here might change a bit depending on your version of the
 Another Note: When changing the board manager version, make sure to "Remove" the previous version you have installed before installing the new version. Don't just click "Update", or else the new version will install on top of the old version, and this will cause all sorts of weird problems.
 
 #### Step 5
-Click "Upload". Watch the upload output carefully. When you see ``Connecting.....______....._____`` on the upload output, quickly connect the RST pin on the ESP8266 to ground and disconnect after a second. Then you should see some progress notifications, and the upload should complete successfully.
+Select the correct Port and click "Upload". Watch the upload output carefully. When you see ``Connecting.....______....._____`` on the upload output, quickly connect the RST pin on the ESP8266 to ground and disconnect after a second. Then you should see some progress notifications, and the upload should complete successfully.
 
 #### Step 6
 Disconnect the newly flashed esp from the breadboard. Connect it to the 3.3V-to-5V converter. Test the esp with an arduino programmed with ENES100.print() statements (I like to use the Water example code found in **File > Examples > ENES100 > Water**.) You're done!
