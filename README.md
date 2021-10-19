@@ -37,12 +37,14 @@ Set all the options under the Tools menu like this (or as close as possible):
 
 ![alt text](./ToolsOptions.jpg "Tools Options")
 
-Note: The exact options here might change a bit depending on your version of the esp8266 board manager and your version of the Arduino IDE. The picture above is with esp8266 board manager version 2.6.3 and Arduino version 1.8.11. If you're having problems, try upgrading or downgrading to these versions. 
+**Note:** The exact options here might change a bit depending on your version of the esp8266 board manager and your version of the Arduino IDE. The picture above is with esp8266 board manager version 2.6.3 and Arduino version 1.8.11. If you're having problems, try upgrading or downgrading to these versions. 
 
-Another Note: When changing the board manager version, make sure to "Remove" the previous version you have installed before installing the new version. Don't just click "Update", or else the new version will install on top of the old version, and this will cause all sorts of weird problems.
+**Another Note:** When changing the board manager version, make sure to "Remove" the previous version you have installed before installing the new version. Don't just click "Update", or else the new version will install on top of the old version, and this will cause all sorts of weird problems.
+
+**Another Note:** If you receive an error saying `Invalid (unsupported) command 0x8 esp8266`, try changing CPU frequency from 80 MHz --> 160 MHz. 
 
 #### Step 5
-Select the correct Port and click "Upload". Watch the upload output carefully. When you see ``Connecting.....______....._____`` on the upload output, quickly connect the RST pin on the ESP8266 to ground and disconnect after a second. Then you should see some progress notifications, and the upload should complete successfully.
+Select the correct Port and click "Upload". Watch the upload output carefully. First connect the RST to GND and then when you see ``Connecting.....______....._____`` on the upload output, quickly switch the RST pin on the ESP8266 to +3.3V and keep there for the duration of the upload process. Then you should see some progress notifications, and the upload should complete successfully (ending with "soft reset.").
 
 #### Step 6
 Disconnect the newly flashed esp from the breadboard. Connect it to the 3.3V-to-5V converter. Test the esp with an arduino programmed with ENES100.print() statements (I like to use the Water example code found in **File > Examples > ENES100 > Water**.) You're done!
