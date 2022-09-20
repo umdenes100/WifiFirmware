@@ -30,10 +30,6 @@ void setup() {
 }
 
 void loop() {
-  static int opcode, pos;
-  static unsigned long lastWrite;
-  static bool dataWritten;
-
   if (!ws.isConnected()) {
 		ws.connect(VS_ADDRESS, "/", VS_PORT);
 	} else {
