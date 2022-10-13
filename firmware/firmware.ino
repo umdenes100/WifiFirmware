@@ -16,7 +16,7 @@ String arduinoInput = "";
 
 const char* VS_ADDRESS = "192.168.1.2";
 const int VS_PORT = 7755;
-
+WiFiClient client;
 // WebSocketClient ws(true);
 void setup() {  
   // Begin serial communication with Arduino
@@ -31,67 +31,63 @@ void setup() {
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
     ESP.restart();
   }
+
+  client.connect(VS_ADDRESS, VS_PORT);
   // Serial.println("Connected to wifi network");
 }
 
+char buff[100];
+byte buff_index = 0;
+
 void loop() {
-  static unsigned long lastWrite;
-  static bool dataWritten;
-  static String s;
-  String message = "";
-  static bool wait = false;
 
   //Read in data from Arduino
   while (Serial.available() > 0) {
-        char c = Serial.read();
-        s += c;
-        //Serial.println(s);
-        if (c == '\n') {
-          //Serial.println("Done Reading");
-          message = s;
-          s = "";
+        buff[buff_index++] = Serial.read();
+        if(!client.connected())
+          ESP.restart();
+        if (buff[buff_index-1] == '\n') {
+          client.write(buff, buff_index);
+          buff_index = 0; 
         }
   }
-  lastWrite = millis();
-  // Use WiFiClient class to create TCP connections
-  WiFiClient client;
-  Serial.println(message);
-  if (message.length() > 0 && !client.connect(VS_ADDRESS, VS_PORT)) {
-    Serial.write("connection failed");
-    return;
-  } 
 
-  // // This will send a string to the server
-  if (client.connected() && message.length() > 0) { 
-    //Serial.println("send data");
-    client.println(message); 
-  }
+  // //Serial.println(message);
+  // if (message.length() > 0 && client.connected()) {
+  //   //Serial.write("connection failed");
+  //   return;
+  // } 
+
+  // // // This will send a string to the server
+  // if (client.connected()) { 
+  //   //Serial.println("send data");
+    
+  // }
   // wait for data to be available
-  unsigned long timeout = millis();
-  if(message.length()> 0){
-    while (client.available() == 0) {
-      if (millis() - timeout > 5000) {
-        client.stop();
-        delay(3000);
-        return;
-      }
-    }
-  }
+  // unsigned long timeout = millis();
+ 
+  // while (client.available() == 0) {
+  //   if (millis() - timeout > 5000) {
+  //     //client.stop();
+  //     delay(3000);
+  //     return;
+  //   }
+  // }
+  
   // Read all the lines of the reply from server and print them to Serial
   //Serial.println("receiving from remote server");
   // not testing 'client.connected()' since we do not need to send data here
   while (client.available()) {
     char ch = static_cast<char>(client.read());
     Serial.write(ch);
-    
   }
-  lastWrite = millis();
+  // lastWrite = millis();
   // Close the connection
   // client.stop();
 
 
   // Clear the write buffer after timeout
-  ESP.restart();
+  //ESP.restart();
 }
 
 
