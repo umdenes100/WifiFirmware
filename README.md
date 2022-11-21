@@ -60,3 +60,7 @@ With a dedicated USB converter, the ESP8266 can be plugged in directly to the pr
 Open the sketch from this repository in Arduino IDE. Set the board type by selecting **Tools > Board > Generic ESP8266 Module**. Set the flash mode by selecting **Tools > Flash Mode > DIO**. Set the memory size by selecting **Tools > Flash Size > 1M (no SPIFFs)**. Set the programmer by selecting **Tools > Programmer > USBasp**. Set the appropriate port and click upload.
 
 _Note: The ESP8266 may need to be reset between code uploads. Simply disconnect and reconnect the VCC connection._
+
+## Using the Auto-flasher
+Make sure you place the ESP in such that it covers the green area on the board. Next, make sure the switch is in the "up" position (for consistency, we will consider up to be when the green paint is on the right). Upload the firmware.ino file to the auto-flasher Arduino. Check the output console for when it starts to say ``Connecting.....______....._____``.
+When this starts to display, change the switch from the "up" position to the "down" position. It should soon begin to print progress notifications and displasy the % progress. If it instead errors, try the process again.
