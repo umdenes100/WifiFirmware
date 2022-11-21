@@ -3,7 +3,9 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "helpers.h"
+//With DEBUG enabled, it will print out debug messages to the Serial port.
 //#define DEBUG
+//With USE_SWSR_AS_ARD enabled, it will do the Arduino stuff over a software serial part on D3 and D4. Useful to free up the Serial port for debug messages.
 //#define USE_SWSR_AS_ARD
 
 

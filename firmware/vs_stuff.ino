@@ -20,7 +20,7 @@ void send() {
     byte i;
     switch (buff[0]) {
         case OP_PING:
-            arduinoSerial.write((bool) client.ping());
+            arduinoSerial.write(client.ping() ? 0x05 : 0x09);
             break;
         case OP_BEGIN:
             doc["op"] = "begin";
