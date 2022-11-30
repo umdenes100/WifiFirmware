@@ -1,4 +1,6 @@
+//Tools -> Manage Libraries -> Search for ArduinoJson
 #include <ArduinoJson.h>
+//Tools -> Manage Libraries -> Search for ArduinoWebsockets by Gil Maimon
 #include <ArduinoWebsockets.h>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
