@@ -9,12 +9,6 @@
 
 //This will decode proprietary stuff and turn it into json. At the time send() is called, everything we need is in buff
 
-typedef union
-{
-    float f;
-    uint8_t b[4];
-} float_converter_t;
-
 void send() {
     doc.clear();
     byte i;
@@ -35,7 +29,6 @@ void send() {
             doc["teamName"] = teamName;
             doc["teamType"] = teamType;
             arucoConfirmed = false;
-            needToSendMission = true; //Lets send the mission site immediately after reciept.
             break;
         case OP_BEGIN_NEW:
             doc["op"] = "begin";
@@ -67,11 +60,11 @@ void send() {
             break;
         case OP_LOCATION_NEW:
             sendAruco();
-            break;
+            return;
         case OP_MISSION:
             doc["op"] = "mission";
             doc["teamName"] = teamName;
-            doc["type"] = buff[1];
+            doc["type"] = (int) buff[1];
             i = 2;
             while (buff[i] != 0xFF and i < 200) { //Since ASCII cannot be 0xFF (0-128) we only need to check the first of the ending sequence.
                 buff[i - 2] = buff[i]; //Move the message foward in the buffer.
@@ -150,9 +143,9 @@ void onMessageCallback(WebsocketsMessage message) {
         aruco_x = doc["aruco"]["x"];
         aruco_y = doc["aruco"]["y"];
         aruco_theta = doc["aruco"]["theta"];
+        newData = true;
     }
     else if (strcmp(doc["op"], "info") == 0) {
-        if (needToSendMission) {
             const float x = 0.55, theta = 0;
             float y;
             if (strcmp(doc["mission_loc"], "bottom") == 0) //mission location is on bottom
@@ -162,17 +155,15 @@ void onMessageCallback(WebsocketsMessage message) {
             float_converter_t f;
             arduinoSerial.write(0x05);
             arduinoSerial.flush();
-            f.f = x;
+            f.f = 0.55; //x
             arduinoSerial.write(f.b, 4);
             arduinoSerial.flush();
-            f.f = y;
+            f.f = strcmp(doc["mission_loc"], "bottom") == 0 ? 0.55 : 1.45; //y
             arduinoSerial.write(f.b, 4);
             arduinoSerial.flush();
-            f.f = theta;
+            f.f = 0; //theta is 0
             arduinoSerial.write(f.b, 4);
             arduinoSerial.flush();
-            needToSendMission = false;
-        }
     }
     else if (strcmp(doc["op"], "aruco_confirm") == 0) {
         arucoConfirmed = true;

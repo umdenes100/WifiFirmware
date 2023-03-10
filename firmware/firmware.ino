@@ -20,7 +20,9 @@ SoftwareSerial arduinoSerial;
 
 
 // WiFi network name
-#define ROOM 1215
+#define ROOM 1116
+
+// No touchy below unless the wifi name changes.
 #if ROOM == 1116  //big lab
 #define WIFI_NETWORK "VisionSystem1116-2.4"
 #elif ROOM == 1215 //small Lab
@@ -64,11 +66,13 @@ double aruco_y;
 double aruco_theta;
 bool aruco_visible;
 
+bool newData = false;
+
 //We need to keep sending the aruco information until the aruco is confirmed by the server.
 bool arucoConfirmed = false;
 
 //Because of the asynchronous nature of the code and the synchronous nature of the original codebase
-bool needToSendAruco = false, needToSendMission = false;
+bool needToSendAruco = false;
 
 StaticJsonDocument<300> doc;
 const byte FLUSH_SEQUENCE[] = {0xFF, 0xFE, 0xFD, 0xFC};
@@ -98,42 +102,17 @@ void setup() {
 #endif
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_NETWORK, NULL);
-    // Connect to Wifi. At an attempt at robustness, we will also catch any incoming serial data. However, we are only going to hold one command.
-    bool stop = false; //Once we get a stop sequence (Assuming its from the begin statement) lets stop.
     while (WiFi.status() != WL_CONNECTED)
     {
-        if (not stop) {
-            if (arduinoSerial.available())
-                buff[buff_index++] = arduinoSerial.read();
-            if (
-                buff[buff_index - 4] == FLUSH_SEQUENCE[0] and
-                buff[buff_index - 3] == FLUSH_SEQUENCE[1] and
-                buff[buff_index - 2] == FLUSH_SEQUENCE[2] and
-                buff[buff_index - 1] == FLUSH_SEQUENCE[3]) {
-                stop = true;
-#ifdef DEBUG
-                ps("we got one. OP: "); Serial.println(buff[0], HEX);
-#endif
-            }
-            if (buff_index == 500) { //Buffer overflow. It is very unlikely this will occur. It could only occur with a print so we will just cut it off.
-                buff[496] = FLUSH_SEQUENCE[0];
-                buff[497] = FLUSH_SEQUENCE[1];
-                buff[498] = FLUSH_SEQUENCE[2];
-                buff[499] = FLUSH_SEQUENCE[3];
-                stop = true;
-            }
-        }
         if (millis() > 10 * 1000) {
 #ifdef DEBUG
-            psl("Failed to connect...");
-            Serial.flush();
+            psl("Failed to connect..."); Serial.flush();
 #endif
             ESP.restart();
         }
         yield();
     }
     client.onMessage(onMessageCallback);
-
     client.onEvent(onEventsCallback);
 #ifdef DEBUG
     psl("Connected to WiFi");
@@ -150,9 +129,8 @@ void setup() {
 #ifdef DEBUG
     psl("Connected to websocket");
 #endif
-    if (stop) {
-        send();
-        buff_index = 0;
+    while (arduinoSerial.available()) {
+        arduinoSerial.read();
     }
 }
 
@@ -175,6 +153,35 @@ void loop() {
             //            ps("sending "); p(buff_index); psl(" bytes.");
 #endif
             send();
+            buff_index = 0;
+        }
+
+#define OP_CHECK    51
+#define OP_PRO_UP   52
+        if (buff[0] == OP_CHECK) {
+            buff_index = 0;
+            //Quick Version. If we have new data, send it back.
+            if (newData) {
+                newData = false;
+                if (aruco_visible) {
+                    float_converter_t f;
+                    arduinoSerial.write(0x02);
+                    arduinoSerial.write(uint8_t(max(aruco_x * 100, 0.0)));
+                    uint16_t y = max(aruco_y * 100, 0.0);
+                    arduinoSerial.write((byte *) &y, 2);
+                    int16_t t = aruco_theta * 100;
+                    arduinoSerial.write((byte *) &t, 2);
+                    arduinoSerial.flush();
+                } else {
+                    arduinoSerial.write(0x01);
+                    arduinoSerial.flush();
+                }
+            } else {
+                arduinoSerial.write(0x00); arduinoSerial.flush();
+            }
+        }
+        if (buff[0] == 0x99) { //Ping
+            Serial.write(0x99);
             buff_index = 0;
         }
     }

@@ -38,4 +38,8 @@ float mapf(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-void(* reset) (void) = 0;
+typedef union
+{
+    float f;
+    uint8_t b[4];
+} float_converter_t;
