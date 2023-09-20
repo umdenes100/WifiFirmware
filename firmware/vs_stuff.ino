@@ -1,88 +1,33 @@
-#define OP_PING     0
-#define OP_BEGIN    2
-#define OP_LOCATION 4
-#define OP_MISSION  6
-#define OP_PRINT    8
-
-#define OP_BEGIN_NEW 3
-#define OP_LOCATION_NEW 5
-
 //This will decode proprietary stuff and turn it into json. At the time send() is called, everything we need is in buff
 
 void send() {
     doc.clear();
     byte i;
     switch (buff[0]) {
-        case OP_PING:
-            arduinoSerial.write(client.ping() ? 0x05 : 0x09);
-            break;
         case OP_BEGIN:
             doc["op"] = "begin";
             teamType = buff[1];
-            memset(teamName, 0, 50); //Clear the memory of teamName.
-            i = 2;
-            while (buff[i] != 0xFF) { //Since ASCII cannot be 0xFF (0-128) we only need to check the first of the ending sequence.
-                teamName[i - 2] = buff[i]; //Move the teamName
-                i++;
-            }
-            //            putl((char*) &teamName);
-            doc["teamName"] = teamName;
-            doc["teamType"] = teamType;
-            arucoConfirmed = false;
-            break;
-        case OP_BEGIN_NEW:
-            doc["op"] = "begin";
-            teamType = buff[1];
             aruco = ((int) buff[2] << 8) + buff[3];
-            memset(teamName, 0, 50); //Clear the memory of teamName.
-            i = 4;
-            while (buff[i] != 0xFF) { //Since ASCII cannot be 0xFF (0-128) we only need to check the first of the ending sequence.
-                teamName[i - 4] = buff[i]; //Move the teamName
-                i++;
-            }
+
+            strcpy(teamName, (char *) &buff[4]);
+
             doc["teamName"] = teamName;
             doc["aruco"] = aruco;
             doc["teamType"] = teamType;
             break;
-        case OP_LOCATION:
-            if (arucoConfirmed == false) {
-                aruco = ((int) buff[2] << 8) + buff[1];
-                doc["op"] = "aruco";
-                doc["aruco"] = aruco;
-#ifdef DEBUG
-                putl(aruco);
-#endif
-                needToSendAruco = true; //Lets send the ArUco immediately after reciept.
-            } else { //Lets send the last value for x,y and theta we recieved.
-                sendAruco();
-                return;
-            }
-            break;
-        case OP_LOCATION_NEW:
-            sendAruco();
-            return;
+
         case OP_MISSION:
             doc["op"] = "mission";
             doc["teamName"] = teamName;
             doc["type"] = (int) buff[1];
-            i = 2;
-            while (buff[i] != 0xFF and i < 200) { //Since ASCII cannot be 0xFF (0-128) we only need to check the first of the ending sequence.
-                buff[i - 2] = buff[i]; //Move the message foward in the buffer.
-                i++;
-            }
-            buff[i - 2] = '\0'; //End it with the null byte.
+            strcpy(buff, (char *) &buff[2]);
             doc["message"] = buff;
             break;
+
         case OP_PRINT:
             doc["op"] = "print";
             doc["teamName"] = teamName;
-            // Ok so my genius idea is that we move all the charachters forward.
-            i = 1;
-            while (buff[i] != 0xFF and i < 200) { //Since ASCII cannot be 0xFF (0-128) we only need to check the first of the ending sequence.
-                buff[i - 1] = buff[i]; //Move the message foward in the buffer.
-                i++;
-            }
-            buff[i - 1] = '\0'; //End it with the null byte.
+            strcpy(buff, (char *) &buff[1]);
             doc["message"] = buff;
             break;
     }

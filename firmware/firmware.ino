@@ -6,10 +6,17 @@
 #include <ESP8266WiFi.h>
 #include "helpers.h"
 //With DEBUG enabled, it will print out debug messages to the Serial port.
-//#define DEBUG
+#define DEBUG
 //With USE_SWSR_AS_ARD enabled, it will do the Arduino stuff over a software serial part on D3 and D4. Useful to free up the Serial port for debug messages.
-//#define USE_SWSR_AS_ARD
+#define USE_SWSR_AS_ARD
 
+#define OP_BEGIN            0x1
+#define OP_PRINT            0x2
+#define OP_CHECK            0x3
+#define OP_MISSION          0x4
+#define OP_ML_PREDICTION    0x5
+#define OP_ML_CAPTURE       0x6
+#define OP_IS_CONNECTED     0x7
 
 #ifdef USE_SWSR_AS_ARD
 #include "SoftwareSerial.h"
@@ -20,7 +27,7 @@ SoftwareSerial arduinoSerial;
 
 
 // WiFi network name
-#define ROOM 1116
+#define ROOM 1215
 
 // No touchy below unless the wifi name changes.
 #if ROOM == 1116  //big lab
@@ -82,19 +89,19 @@ void setup() {
     // Begin serial communication with Arduino
 #ifdef DEBUG
     Serial.begin(115200);
-    Serial.println("Hellow");
+    Serial.println("DEBUG ENABLED");
     delay(1000);
 #endif
     //Set up the serial port.
 #ifdef USE_SWSR_AS_ARD
-    arduinoSerial.begin(9600, SWSERIAL_8N1, D3, D4, false);
+    arduinoSerial.begin(57600, SWSERIAL_8N1, D3, D4, false);
 #ifdef DEBUG
     if (!arduinoSerial) { // If the object did not initialize, then its configuration is invalid
         psl("Invalid SoftwareSerial pin configuration, check config");
     }
 #endif
 #else
-    Serial.begin(9600);
+    Serial.begin(57600);
 #endif
 
 #ifdef DEBUG
@@ -112,11 +119,11 @@ void setup() {
         }
         yield();
     }
-    client.onMessage(onMessageCallback);
-    client.onEvent(onEventsCallback);
 #ifdef DEBUG
     psl("Connected to WiFi");
 #endif
+    client.onMessage(onMessageCallback);
+    client.onEvent(onEventsCallback);
     client.connect("ws://192.168.1.2:7755");
     if (!client.available()) {
 #ifdef DEBUG
@@ -156,33 +163,30 @@ void loop() {
             buff_index = 0;
         }
 
-#define OP_CHECK    51
-#define OP_PRO_UP   52
         if (buff[0] == OP_CHECK) {
             buff_index = 0;
             //Quick Version. If we have new data, send it back.
             if (newData) {
                 newData = false;
                 if (aruco_visible) {
-                    float_converter_t f;
                     arduinoSerial.write(0x02);
-                    arduinoSerial.write(uint8_t(max(aruco_x * 100, 0.0)));
-                    uint16_t y = max(aruco_y * 100, 0.0);
-                    arduinoSerial.write((byte *) &y, 2);
+                    arduinoSerial.write(uint8_t(max(aruco_y * 100, 0.0)));
+                    uint16_t x = max(aruco_x * 100, 0.0);
+                    arduinoSerial.write((byte *) &x, 2);
                     int16_t t = aruco_theta * 100;
                     arduinoSerial.write((byte *) &t, 2);
                     arduinoSerial.flush();
                 } else {
-                    arduinoSerial.write(0x01);
-                    arduinoSerial.flush();
+                    arduinoSerial.write(0x01); arduinoSerial.flush();
                 }
             } else {
                 arduinoSerial.write(0x00); arduinoSerial.flush();
             }
         }
-        if (buff[0] == 0x99) { //Ping
-            Serial.write(0x99);
+
+        if(buff[0] == OP_IS_CONNECTED) {
             buff_index = 0;
+            arduinoSerial.write(client.available() ? 0x01 : 0xFF);
         }
     }
 
