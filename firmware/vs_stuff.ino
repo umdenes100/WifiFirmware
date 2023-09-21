@@ -9,7 +9,7 @@ void send() {
             teamType = buff[1];
             aruco = ((int) buff[2] << 8) + buff[3];
 
-            strcpy(teamName, (char *) &buff[4]);
+            strcpy((char *) teamName, (char *) &buff[4]);
 
             doc["teamName"] = teamName;
             doc["aruco"] = aruco;

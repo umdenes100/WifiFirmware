@@ -2,11 +2,21 @@
 
 Firmware to be uploaded to ESP8266 modules to interact with Vision System over Wi-Fi.
 
+## How it works
+
+The ESP reads over its serial port. The messages it can receive are documented here:
+https://docs.google.com/document/d/1Qn4ZSiCaDrJnWB5pwHwsY7DCydPrIhcLQWudpwF30uw/edit?usp=sharing
+
+The ESP connects to the vision system via a websocket. Looking at the API between the ESP module and the Vision System
+is best understood by looking at the Vision System codebase, specifically components/communications/esp_server.py. 
+The method 'message_received'  is the best way to get started.
+
 ## Programming the ESP8266
 
 ### Using the Auto-flasher (Recommended if you can find it)
 
-If you haven't done this before, open Arduino and go to **File > Preferences** (**Ctrl + Comma** on Windows or **⌘ + Comma** on macOS).
+If you haven't done this before, open Arduino and go to **File > Preferences** (**Ctrl + Comma** on Windows or **⌘ +
+Comma** on macOS).
 In the textbox for "Additional Boards Manager URLs",
 insert `http://arduino.esp8266.com/stable/package_esp8266com_index.json`, then press OK. Update the board definitions by
 opening the Boards Manager (**Tools > Board > Boards Manager...**), finding "esp8266" on the list, selecting the latest
@@ -16,14 +26,14 @@ Set all the options under the Tools menu like this (or as close as possible):
 
 ![alt text](./ToolsOptions.jpg "Tools Options")
 
-1. Open firmware.h in your IDE. Add the required libraries (see the top of the file) 
+1. Open firmware.h in your IDE. Add the required libraries (see the top of the file)
 2. Make sure you place the ESP in such that it covers the green area on the board.
 3. Next, make sure the switch is in the "up" position (for consistency, we will consider up to be when the green paint
    is on the right).
 4. Upload the firmware.ino file to the auto-flasher Arduino. Check the output console for when it starts to
    say ``Connecting.....______....._____``.
    When this starts to display, change the switch from the "up" position to the "down" position. It should soon begin to
-   print progress notifications and displasy the % progress. If it instead errors, try the process again. 
+   print progress notifications and display the % progress. If it instead errors, try the process again.
 
 Seriously - it might only work 50% of the time - this is normal.
 
@@ -42,16 +52,16 @@ Uno, and your computer like this:
 
 In text form, this is how the ESP-01 pins should be connected:
 
-| Pin                             | Connection                                                   |
+| Pin                             |                                                   Connection |
 |---------------------------------|-------------------------------------------------------------:|
-| TXD                             | Arduino Pin 1 (TX)                                           |
-| CHPD (might also be called EN)  | 3.3V                                                         |
+| TXD                             |                                           Arduino Pin 1 (TX) |
+| CHPD (might also be called EN)  |                                                         3.3V |
 | RST                             | Unconnected, with an open switch or button to connect to GND |
-| VCC (might also be called 3.3V) | Arduino 3.3V                                                 |
-| GND                             | Arduino GND                                                  |
-| GPIO2                           | Unconnected                                                  |
-| GPIO0                           | GND                                                          |
-| RXD                             | Arduino Pin 0 (RX)                                           |
+| VCC (might also be called 3.3V) |                                                 Arduino 3.3V |
+| GND                             |                                                  Arduino GND |
+| GPIO2                           |                                                  Unconnected |
+| GPIO0                           |                                                          GND |
+| RXD                             |                                           Arduino Pin 0 (RX) |
 
 This ensures the ESP-01 will boot in programming mode (GPIO0 to ground puts it in programming mode).
 
