@@ -3,12 +3,27 @@
 //Tools -> Manage Libraries -> Search for ArduinoWebsockets by Gil Maimon
 #include <ArduinoWebsockets.h>
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+
 #include "helpers.h"
+
+// THINGS YOU CAN SET!!!!
+
 //With DEBUG enabled, it will print out debug messages to the Serial port.
 //#define DEBUG
 //With USE_SWSR_AS_ARD enabled, it will do the Arduino stuff over a software serial part on D3 and D4. Useful to free up the Serial port for debug messages.
 //#define USE_SWSR_AS_ARD
+// WiFi network name
+#define ROOM 1116
+// Comment this line OUT if you are compiling for a regular wifi module. Otherwise, make sure this line is in!!!
+// To compile for a regular ESP8266 Module, Tools -> Board -> ESP8266 Boards -> Generic ESP8266 Module
+//#define ML_MODULE
+
+#ifdef ML_MODULE
+#include <WiFi.h>
+#include "camera.h"
+#else
+#include <ESP8266WiFi.h>
+#endif
 
 #define OP_BEGIN            0x1
 #define OP_PRINT            0x2
@@ -17,6 +32,11 @@
 #define OP_ML_PREDICTION    0x5
 #define OP_ML_CAPTURE       0x6
 #define OP_IS_CONNECTED     0x7
+#define OP_PRED             0x8
+
+#ifndef JSON_DOC_SIZE
+#define JSON_DOC_SIZE 300
+#endif
 
 #ifdef USE_SWSR_AS_ARD
 #include "SoftwareSerial.h"
@@ -26,8 +46,6 @@ SoftwareSerial arduinoSerial;
 #endif
 
 
-// WiFi network name
-#define ROOM 1215
 
 // No touchy below unless the wifi name changes.
 #if ROOM == 1116  //big lab
@@ -43,7 +61,7 @@ void onEventsCallback(WebsocketsEvent event, String data) {
     if (event == WebsocketsEvent::ConnectionOpened) {
         Serial.println("Connnection Opened");
     } else if (event == WebsocketsEvent::ConnectionClosed) {
-        Serial.println("Connnection Closed");
+        Serial.println("Connnection Closed");  
         delay(1000);
         ESP.restart();
     } else if (event == WebsocketsEvent::GotPing) {
@@ -81,7 +99,7 @@ bool arucoConfirmed = false;
 //Because of the asynchronous nature of the code and the synchronous nature of the original codebase
 bool needToSendAruco = false;
 
-StaticJsonDocument<300> doc;
+StaticJsonDocument<JSON_DOC_SIZE> doc;
 const byte FLUSH_SEQUENCE[] = {0xFF, 0xFE, 0xFD, 0xFC};
 
 WebsocketsClient client;
@@ -139,6 +157,10 @@ void setup() {
     while (arduinoSerial.available()) {
         arduinoSerial.read();
     }
+
+#ifdef ML_MODULE
+    ESPCAMinit();
+#endif
 }
 
 void loop() {
@@ -184,7 +206,7 @@ void loop() {
             }
         }
 
-        if(buff[0] == OP_IS_CONNECTED) {
+        if (buff[0] == OP_IS_CONNECTED) {
             buff_index = 0;
             arduinoSerial.write(client.available() ? 0x01 : 0xFF);
         }

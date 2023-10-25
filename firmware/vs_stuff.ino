@@ -30,8 +30,60 @@ void send() {
             strcpy(buff, (char *) &buff[1]);
             doc["message"] = buff;
             break;
+
+#ifdef ML_MODULE
+        case OP_PRED: {
+                camera_fb_t * fb = esp_camera_fb_get();
+
+                if (!fb) {
+                    //                    Serial.println("Camera capture failed");
+                    doc["op"] = "image_failure";
+                    serializeJson(doc, buff);
+                    client.send(buff);
+                    return;
+                }
+
+                //                Serial.println("Camera capture successful!");
+                //                Serial.println(fb->len);
+                doc["op"] = "image_reset";
+                serializeJson(doc, buff);
+                //                serializeJson(doc, Serial);
+                client.send(buff);
+
+                delay(100);
+                size_t size = fb->len;
+                //                Serial.println(size);
+                unsigned packageSize = 2000;
+                char data[packageSize + 1]; // each pixel is 1 byte, should be 2 hex digits surely
+                for (size_t j = 0 ; j < size ; j += packageSize / 2) {
+                    uint32_t s = millis();
+                    for (size_t i = 0; i < packageSize / 2 && (i + j) < size; i++) { // soooo not cool :(
+                        byte pixel = fb->buf[i + j]; // buffer pixel should be 1 byte surely
+                        sprintf(data + (2 * i), "%02x", pixel);
+                    }
+                    doc.clear();
+                    doc["op"] = "image_chunk";
+                    //Serial.println(data);
+                    doc["chunk"].set(data);
+                    doc["index"] = j / (packageSize / 2);
+                    serializeJson(doc, buff);
+                    //serializeJson(doc, Serial);
+                    //                    Serial.println(millis() - s);
+                    delay(50);
+                    client.send(buff);
+                }
+                esp_camera_fb_return(fb);
+                doc.clear();
+                doc["op"] = "prediction_request";
+                serializeJson(doc, buff);
+                //                serializeJson(doc, Serial);
+                client.send(buff);
+                delay(100);
+                return;
+            }
+#endif
     }
-    //        Ok, now we need to send this baddy out on the websocket.
+    // Ok, now we need to send this baddy out on the websocket.
     serializeJson(doc, buff);
     client.send(buff);
 }
@@ -91,29 +143,32 @@ void onMessageCallback(WebsocketsMessage message) {
         newData = true;
     }
     else if (strcmp(doc["op"], "info") == 0) {
-            const float x = 0.55, theta = 0;
-            float y;
-            if (strcmp(doc["mission_loc"], "bottom") == 0) //mission location is on bottom
-                y = 0.55;
-            else
-                y = 1.45;
-            float_converter_t f;
-            arduinoSerial.write(0x05);
-            arduinoSerial.flush();
-            f.f = 0.55; //x
-            arduinoSerial.write(f.b, 4);
-            arduinoSerial.flush();
-            f.f = strcmp(doc["mission_loc"], "bottom") == 0 ? 0.55 : 1.45; //y
-            arduinoSerial.write(f.b, 4);
-            arduinoSerial.flush();
-            f.f = 0; //theta is 0
-            arduinoSerial.write(f.b, 4);
-            arduinoSerial.flush();
+        const float x = 0.55, theta = 0;
+        float y;
+        if (strcmp(doc["mission_loc"], "bottom") == 0) //mission location is on bottom
+            y = 0.55;
+        else
+            y = 1.45;
+        float_converter_t f;
+        arduinoSerial.write(0x05);
+        arduinoSerial.flush();
+        f.f = 0.55; //x
+        arduinoSerial.write(f.b, 4);
+        arduinoSerial.flush();
+        f.f = strcmp(doc["mission_loc"], "bottom") == 0 ? 0.55 : 1.45; //y
+        arduinoSerial.write(f.b, 4);
+        arduinoSerial.flush();
+        f.f = 0; //theta is 0
+        arduinoSerial.write(f.b, 4);
+        arduinoSerial.flush();
     }
     else if (strcmp(doc["op"], "aruco_confirm") == 0) {
         arucoConfirmed = true;
 #ifdef DEBUG
         psl("Aruco Confirmed...");
 #endif
+    } else if (strcmp(doc["op"], "prediction") == 0) {
+        int pred = doc["prediction"];
+        arduinoSerial.write((byte *) &pred, 2);
     }
 }
