@@ -13,7 +13,7 @@
 //With USE_SWSR_AS_ARD enabled, it will do the Arduino stuff over a software serial part on D3 and D4. Useful to free up the Serial port for debug messages.
 //#define USE_SWSR_AS_ARD
 // WiFi network name
-#define ROOM 1116
+#define ROOM 1120
 // Comment this line OUT if you are compiling for a regular wifi module. Otherwise, make sure this line is in!!!
 // To compile for a regular ESP8266 Module, Tools -> Board -> ESP8266 Boards -> Generic ESP8266 Module
 //#define ML_MODULE
@@ -50,8 +50,8 @@ SoftwareSerial arduinoSerial;
 // No touchy below unless the wifi name changes.
 #if ROOM == 1116  //big lab
 #define WIFI_NETWORK "VisionSystem1116-2.4"
-#elif ROOM == 1215 //small Lab
-#define WIFI_NETWORK "VisionSystem1215-2.4"
+#elif ROOM == 1120 //small Lab
+#define WIFI_NETWORK "VisionSystem1120-2.4"
 #endif
 
 using namespace websockets;
