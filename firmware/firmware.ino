@@ -1,105 +1,217 @@
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+//Tools -> Manage Libraries -> Search for ArduinoJson
+#include <ArduinoJson.h>
+//Tools -> Manage Libraries -> Search for ArduinoWebsockets by Gil Maimon
+#include <ArduinoWebsockets.h>
+#include <Arduino.h>
 
+#include "helpers.h"
+
+// THINGS YOU CAN SET!!!!
+
+//With DEBUG enabled, it will print out debug messages to the Serial port.
+//#define DEBUG
+//With USE_SWSR_AS_ARD enabled, it will do the Arduino stuff over a software serial part on D3 and D4. Useful to free up the Serial port for debug messages.
+//#define USE_SWSR_AS_ARD
 // WiFi network name
-#define ROOM 1116
-#if ROOM == 1116
-    #define WIFI_NETWORK "VisionSystem1116-2.4"
-#elif ROOM == 1215
-    #define WIFI_NETWORK "VisionSystem1215-2.4"
+#define ROOM 1120
+// Comment this line OUT if you are compiling for a regular wifi module. Otherwise, make sure this line is in!!!
+// To compile for a regular ESP8266 Module, Tools -> Board -> ESP8266 Boards -> Generic ESP8266 Module
+//#define ML_MODULE
+
+#ifdef ML_MODULE
+#include <WiFi.h>
+#include "camera.h"
+#else
+#include <ESP8266WiFi.h>
 #endif
 
-WiFiUDP client;
-unsigned char seq = 0;
+#define OP_BEGIN            0x1
+#define OP_PRINT            0x2
+#define OP_CHECK            0x3
+#define OP_MISSION          0x4
+#define OP_ML_PREDICTION    0x5
+#define OP_ML_CAPTURE       0x6
+#define OP_IS_CONNECTED     0x7
+#define OP_PRED             0x8
 
-const char* VS_ADDRESS = "192.168.1.2";
-const int VS_PORT = 7755;
+#ifndef JSON_DOC_SIZE
+#define JSON_DOC_SIZE 300
+#endif
+
+#ifdef USE_SWSR_AS_ARD
+#include "SoftwareSerial.h"
+SoftwareSerial arduinoSerial;
+#else
+#define arduinoSerial Serial
+#endif
+
+
+
+// No touchy below unless the wifi name changes.
+#if ROOM == 1116  //big lab
+#define WIFI_NETWORK "VisionSystem1116-2.4"
+#elif ROOM == 1120 //small Lab
+#define WIFI_NETWORK "VisionSystem1120-2.4"
+#endif
+
+using namespace websockets;
+
+#ifdef DEBUG
+void onEventsCallback(WebsocketsEvent event, String data) {
+    if (event == WebsocketsEvent::ConnectionOpened) {
+        Serial.println("Connnection Opened");
+    } else if (event == WebsocketsEvent::ConnectionClosed) {
+        Serial.println("Connnection Closed");  
+        delay(1000);
+        ESP.restart();
+    } else if (event == WebsocketsEvent::GotPing) {
+        Serial.println("Got a Ping!");
+    } else if (event == WebsocketsEvent::GotPong) {
+        Serial.println("Got a Pong!");
+    }
+}
+#else
+void onEventsCallback(WebsocketsEvent event, String data) {
+    if (event == WebsocketsEvent::ConnectionClosed) {
+        delay(1000);
+        ESP.restart();
+    }
+}
+#endif
+
+char buff[500];
+uint16_t buff_index = 0;
+byte teamName[50]; //Stores the team name.
+byte teamType;
+int aruco;
+
+//Ok basically the ESP will hold the last recieved result.
+double aruco_x;
+double aruco_y;
+double aruco_theta;
+bool aruco_visible;
+
+bool newData = false;
+
+//We need to keep sending the aruco information until the aruco is confirmed by the server.
+bool arucoConfirmed = false;
+
+//Because of the asynchronous nature of the code and the synchronous nature of the original codebase
+bool needToSendAruco = false;
+
+StaticJsonDocument<JSON_DOC_SIZE> doc;
 const byte FLUSH_SEQUENCE[] = {0xFF, 0xFE, 0xFD, 0xFC};
 
-void setup() {  
-  // Begin serial communication with Arduino
-  Serial.begin(9600);
+WebsocketsClient client;
+void setup() {
+    // Begin serial communication with Arduino
+#ifdef DEBUG
+    Serial.begin(115200);
+    Serial.println("DEBUG ENABLED");
+    delay(1000);
+#endif
+    //Set up the serial port.
+#ifdef USE_SWSR_AS_ARD
+    arduinoSerial.begin(57600, SWSERIAL_8N1, D3, D4, false);
+#ifdef DEBUG
+    if (!arduinoSerial) { // If the object did not initialize, then its configuration is invalid
+        psl("Invalid SoftwareSerial pin configuration, check config");
+    }
+#endif
+#else
+    Serial.begin(57600);
+#endif
 
-  // Connect to Vision System network
-  WiFi.begin(WIFI_NETWORK, NULL);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    ESP.restart();
-  }
+#ifdef DEBUG
+    psl("\n\nStarting");
+#endif
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_NETWORK, NULL);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        if (millis() > 10 * 1000) {
+#ifdef DEBUG
+            psl("Failed to connect..."); Serial.flush();
+#endif
+            ESP.restart();
+        }
+        yield();
+    }
+#ifdef DEBUG
+    psl("Connected to WiFi");
+#endif
+    client.onMessage(onMessageCallback);
+    client.onEvent(onEventsCallback);
+    client.connect("ws://192.168.1.2:7755");
+    if (!client.available()) {
+#ifdef DEBUG
+        psl("Failed to connect (websocket)...");
+        Serial.flush();
+#endif
+        delay(1000);
+        ESP.restart();
+    }
+#ifdef DEBUG
+    psl("Connected to websocket");
+#endif
+    while (arduinoSerial.available()) {
+        arduinoSerial.read();
+    }
 
-  // Begin listening for responses on port 7755
-  client.begin(7755);
-  
-  // Open a packet for writing
-  beginPacket();
+#ifdef ML_MODULE
+    ESPCAMinit();
+#endif
 }
 
 void loop() {
-  static int opcode, pos;
-  static unsigned long lastWrite;
-  static bool dataWritten;
-  
-  // Accept incoming data
-  if (Serial.available()) {
-    char c = Serial.read();
-    if (c == FLUSH_SEQUENCE[pos]) {
-      pos++;
-    } else {
-      // If this is the first byte of a payload, store it as the opcode
-      if (!dataWritten) {
-        opcode = c;
-      }
-      // If `c` does not continue the flush sequence,
-      // write back the captured bytes and reset flush
-      for (int i = 0; i < pos; i++) {
-        client.write(FLUSH_SEQUENCE[i]);
-      }
-      pos = 0;
-      // Write incoming byte
-      client.write(c);
-      dataWritten = true;
-    }
-    // Update time of last byte received for timeout
-    lastWrite = millis();
-  }
-  
-  // If the flush sequence is fully written, send data
-  if (pos == 4) {
-    unsigned char expectedSeq = endPacket();
-    pos = 0;
-    
-    // If the opcode sent requires a response, start listening
-    if (opcode == 0 || opcode == 2 || opcode == 4 || opcode == 6) {
-      byte buffer[128];
-      int packetSize;
-      unsigned long start = millis();
-      while (millis() - start < 100) {
-        if ((packetSize = client.parsePacket())) {
-          client.read(buffer, packetSize);
-          if (buffer[0] == expectedSeq) {
-            Serial.write(buffer + 1, packetSize - 1);
-            break;
-          }
+    //Read in data from Arduino
+    if (arduinoSerial.available()) {
+        buff[buff_index++] = arduinoSerial.read();
+        if (buff_index == 500) { //Buffer overflow. It is very unlikely this will occur. It could only occur with a print so we will just cut it off.
+            buff[496] = FLUSH_SEQUENCE[0];
+            buff[497] = FLUSH_SEQUENCE[1];
+            buff[498] = FLUSH_SEQUENCE[2];
+            buff[499] = FLUSH_SEQUENCE[3];
         }
-      }
+        if (
+            buff[buff_index - 4] == FLUSH_SEQUENCE[0] and
+            buff[buff_index - 3] == FLUSH_SEQUENCE[1] and
+            buff[buff_index - 2] == FLUSH_SEQUENCE[2] and
+            buff[buff_index - 1] == FLUSH_SEQUENCE[3]) { //This is the end of the sequence.
+#ifdef DEBUG
+            //            ps("sending "); p(buff_index); psl(" bytes.");
+#endif
+            send();
+            buff_index = 0;
+        }
+
+        if (buff[0] == OP_CHECK) {
+            buff_index = 0;
+            //Quick Version. If we have new data, send it back.
+            if (newData) {
+                newData = false;
+                if (aruco_visible) {
+                    arduinoSerial.write(0x02);
+                    arduinoSerial.write(uint8_t(max(aruco_y * 100, 0.0)));
+                    uint16_t x = max(aruco_x * 100, 0.0);
+                    arduinoSerial.write((byte *) &x, 2);
+                    int16_t t = aruco_theta * 100;
+                    arduinoSerial.write((byte *) &t, 2);
+                    arduinoSerial.flush();
+                } else {
+                    arduinoSerial.write(0x01); arduinoSerial.flush();
+                }
+            } else {
+                arduinoSerial.write(0x00); arduinoSerial.flush();
+            }
+        }
+
+        if (buff[0] == OP_IS_CONNECTED) {
+            buff_index = 0;
+            arduinoSerial.write(client.available() ? 0x01 : 0xFF);
+        }
     }
-    
-    dataWritten = false;
-    beginPacket();
-  }
-  
-  // Clear the write buffer after timeout
-  if (dataWritten && millis() - lastWrite > 20) {
-    ESP.restart();
-  }
-}
 
-void beginPacket() {
-  client.beginPacket(VS_ADDRESS, VS_PORT);
-  client.write(seq);
+    client.poll();
+    yield();
 }
-
-unsigned char endPacket() {
-  client.endPacket();
-  return seq++;
-}
-
