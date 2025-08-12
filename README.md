@@ -64,6 +64,7 @@ In text form, this is how the ESP-01 pins should be connected:
 | RXD                             |                                           Arduino Pin 0 (RX) |
 
 This ensures the ESP-01 will boot in programming mode (GPIO0 to ground puts it in programming mode).
+Note: The [ESP8266](https://user-images.githubusercontent.com/32310882/64036322-e7ceea00-cb20-11e9-8db5-5e38aa3ca02b.png) is the small black chip in the wifi module. The larger [blue chip](https://user-images.githubusercontent.com/32310882/64036213-a6d6d580-cb20-11e9-873c-5798a7c38486.png) converts the voltage from 5 V down to 3.3 V, enabling the blue chip's pins to be plugged into a 5 V source.
 
 #### Step 2
 
@@ -78,6 +79,7 @@ insert `http://arduino.esp8266.com/stable/package_esp8266com_index.json`, then p
 opening the Boards Manager (**Tools > Board > Boards Manager...**), finding "esp8266" on the list, selecting the latest
 version, and pressing "Install". **This only needs to be done once.**
 
+### Uploading Code
 #### Step 4
 
 Set all the options under the Tools menu like this (or as close as possible):
